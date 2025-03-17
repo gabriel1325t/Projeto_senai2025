@@ -1,39 +1,37 @@
 const connect = require("../db/connect");
-module.exports = class ControllerSala {
+const validateSala = require("../services/validateSala");
+module.exports = class classroomController {
   static async createSala(req, res) {
-    const { numero, capacidade, descricao} = req.body;
+    const { numero, descricao, capacidade } = req.body;
 
-    if (!numero || !capacidade || !descricao) {
-      //Verifica se todos os campos estão preenchidos
-      return res
-        .status(400)
-        .json({ error: "Todos os campos devem ser preenchidos" });
-    } else {
-      const query = `INSERT INTO sala (numero, capacidade, descricao) VALUES('${numero}','${capacidade}','${descricao}')`;
-      try {
-        connect.query(query, function (err) {
-          if (err) {
-            if (err.code === "ER_DUP_ENTRY") {
-              return res.status(400).json({
-                error: "A sala já está cadastrada",
-              });
-            } else {
-              return res.status(400).json({
-                error: "Erro interno do servidor",
-              });
-            }
-          } else {
-            return res
-              .status(201)
-              .json({ message: "Sala criada com sucesso" });
-          }
-        });
-      } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: "Erro interno do servidor" });
-      }
+    const validationError = validateSala(req.body);
+        if (validationError) {
+          return res.status(400).json(validationError);
+        }
+
+    // Caso todos os campos estejam preenchidos, realiza a inserção na tabela
+    const query = `INSERT INTO sala (numero, descricao, capacidade) VALUES ( 
+        '${numero}', 
+        '${descricao}', 
+        '${capacidade}'
+      )`;
+
+    try {
+      connect.query(query, function (err) {
+        if (err) {
+          console.log(err);
+          res.status(500).json({ error: "Erro ao cadastrar sala" });
+          return;
+        }
+        console.log("Sala cadastrada com sucesso");
+        res.status(201).json({ message: "Sala cadastrada com sucesso" });
+      });
+    } catch (error) {
+      console.error("Erro ao executar a consulta:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
     }
   }
+
 
   static async getAllSalas(req, res) {
     const query = `SELECT * FROM sala`;
